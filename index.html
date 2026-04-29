@@ -3,112 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>監視器巡檢系統 V7 - 強效匯入版</title>
+    <title>監視器巡檢系統 V10 - 跨瀏覽器穩定版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        .preview-img { max-width: 150px; max-height: 100px; object-fit: cover; border-radius: 4px; background: #f1f5f9; }
+        .preview-img { max-width: 140px; max-height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; background: #f8fafc; }
         .drop-area { border: 2px dashed #cbd5e1; transition: all 0.2s; height: 160px; cursor: pointer; background: white; }
-        .drop-area:hover { border-color: #4f46e5; background: #f8fafc; }
-        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
+        .drop-area:hover { border-color: #6366f1; background: #f5f3ff; }
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; color: white; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen p-4 md:p-8 text-slate-800">
 
+    <!-- 讀取遮罩 -->
     <div id="loading" class="loading-overlay">
-        <div class="animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent mb-4"></div>
-        <p class="text-lg font-bold">正在讀取 Excel 紀錄與還原圖片...</p>
-        <p class="text-sm text-slate-400 mt-2">請勿關閉視窗</p>
+        <div class="animate-spin rounded-full h-16 w-16 border-4 border-indigo-400 border-t-transparent mb-4"></div>
+        <p class="text-lg font-bold tracking-widest" id="loading-text">正在載入檔案內容...</p>
+        <p class="text-xs text-slate-400 mt-2 italic">此過程可能耗時數秒，取決於截圖大小</p>
     </div>
 
-    <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-        <!-- Header -->
-        <div class="bg-indigo-700 p-6 shadow-md">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div class="flex flex-wrap items-center gap-3">
-                    <h1 class="text-2xl font-bold text-white tracking-tight mr-4">監視器巡檢系統</h1>
-                    <label class="bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold py-2 px-4 rounded-lg cursor-pointer transition shadow-lg flex items-center">
-                        📂 匯入舊 Excel 修改
-                        <input type="file" id="importExcel" class="hidden" accept=".xlsx">
-                    </label>
-                </div>
-                <div class="flex items-center bg-indigo-600 rounded-lg px-4 py-2 border border-indigo-400">
-                    <label class="text-indigo-100 mr-2 whitespace-nowrap font-medium text-sm">巡檢據點：</label>
-                    <input type="text" id="siteName" placeholder="例如：台北分部" 
-                        class="bg-transparent text-white placeholder-indigo-300 border-none focus:ring-0 outline-none w-full text-sm font-bold">
-                </div>
+    <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+        <!-- 頂部列 -->
+        <div class="bg-indigo-800 p-6 shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-4">
+                <h1 class="text-2xl font-black text-white tracking-tight">CCTV 巡檢系統</h1>
+                <label class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2.5 px-5 rounded-full cursor-pointer transition-all shadow-lg active:scale-95 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    開啟舊 Excel 檔案
+                    <input type="file" id="importExcel" class="hidden" accept=".xlsx">
+                </label>
+            </div>
+            <div class="flex items-center bg-indigo-900/50 rounded-xl px-4 py-2 border border-indigo-500/50 w-full lg:w-72">
+                <span class="text-indigo-300 mr-2 text-sm font-bold">據點:</span>
+                <input type="text" id="siteName" placeholder="請輸入據點名稱" class="bg-transparent text-white placeholder-indigo-400 border-none focus:ring-0 outline-none w-full text-sm font-bold">
             </div>
         </div>
 
         <div class="p-6">
-            <!-- 輸入區 -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 bg-slate-100 p-6 rounded-xl border border-slate-200 shadow-inner">
+            <!-- 編輯區 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10 bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <div class="space-y-4">
-                    <h3 class="font-bold text-indigo-700 text-sm flex items-center italic">1. 基本資訊</h3>
-                    <input type="text" id="camId" placeholder="監視器編號 / 位置" class="w-full px-4 py-2.5 rounded-lg border-slate-300 border focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-                    <textarea id="camNote" rows="2" placeholder="註記說明 (選填)..." class="w-full px-4 py-2.5 rounded-lg border-slate-300 border focus:ring-2 focus:ring-indigo-500 outline-none text-sm"></textarea>
+                    <h3 class="font-bold text-slate-500 text-[10px] uppercase tracking-[0.2em]">1. 監視器基本資訊</h3>
+                    <input type="text" id="camId" placeholder="輸入編號或位置 (如: CAM-01)" class="w-full px-4 py-3 rounded-xl border-slate-300 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                    <textarea id="camNote" rows="2" placeholder="輸入備註 (選填)" class="w-full px-4 py-3 rounded-xl border-slate-300 border focus:ring-2 focus:ring-indigo-500 outline-none transition-all"></textarea>
                 </div>
 
                 <div class="space-y-2">
-                    <h3 class="font-bold text-indigo-700 text-sm flex items-center italic">2. 畫面截圖</h3>
+                    <h3 class="font-bold text-slate-500 text-[10px] uppercase tracking-[0.2em]">2. 截取畫面</h3>
                     <input type="file" id="fileInput" class="hidden" accept="image/*">
-                    <div id="drop-zone" class="drop-area rounded-xl flex flex-col justify-center items-center p-4">
+                    <div id="drop-zone" class="drop-area rounded-2xl flex flex-col justify-center items-center p-4 border-indigo-100 shadow-inner">
                         <div id="upload-prompt" class="text-center">
-                            <p class="text-slate-400 text-xs font-medium">點擊上傳、拖放圖片 <br> 或 <span class="text-indigo-600 font-bold underline">Ctrl+V 貼上</span></p>
+                            <p class="text-slate-400 text-xs">點擊上傳 或 <span class="text-indigo-600 font-bold underline">Ctrl+V 貼上</span></p>
                         </div>
                         <div id="preview-container" class="hidden relative">
-                            <img id="temp-preview" class="preview-img border shadow-md">
-                            <button id="btn-reset-img" class="absolute -top-3 -right-3 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg border-2 border-white">✕</button>
+                            <img id="temp-preview" class="preview-img shadow-lg border-2 border-white">
+                            <button id="btn-reset-img" class="absolute -top-3 -right-3 bg-slate-800 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md hover:bg-red-500 border-2 border-white transition-colors">✕</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="space-y-4">
-                    <h3 class="font-bold text-indigo-700 text-sm flex items-center italic">3. 狀態確認</h3>
-                    <div class="grid grid-cols-2 gap-3">
-                        <label class="flex items-center bg-white border border-slate-200 rounded-lg p-3 cursor-pointer hover:bg-white transition shadow-sm">
+                    <h3 class="font-bold text-slate-500 text-[10px] uppercase tracking-[0.2em]">3. 核取狀態</h3>
+                    <div class="grid grid-cols-1 gap-2">
+                        <label class="flex items-center bg-white border border-slate-200 rounded-xl p-3 cursor-pointer hover:bg-indigo-50 transition-all select-none">
                             <input type="checkbox" id="checkImage" class="w-5 h-5 text-indigo-600 rounded">
-                            <span class="ml-2 text-xs font-bold text-slate-600">畫面正常</span>
+                            <span class="ml-3 font-bold text-slate-700 text-sm">畫面顯示正常</span>
                         </label>
-                        <label class="flex items-center bg-white border border-slate-200 rounded-lg p-3 cursor-pointer hover:bg-white transition shadow-sm">
+                        <label class="flex items-center bg-white border border-slate-200 rounded-xl p-3 cursor-pointer hover:bg-indigo-50 transition-all select-none">
                             <input type="checkbox" id="checkRecord" class="w-5 h-5 text-indigo-600 rounded">
-                            <span class="ml-2 text-xs font-bold text-slate-600">錄影正常</span>
+                            <span class="ml-3 font-bold text-slate-700 text-sm">錄影紀錄正常</span>
                         </label>
                     </div>
-                    <button onclick="addEntry()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition transform active:scale-95">
-                        新增此筆紀錄
+                    <button onclick="addEntry()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95">
+                        加入清單
                     </button>
                 </div>
             </div>
 
-            <!-- 清單表格 -->
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[300px]">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-widest font-bold">
-                        <tr>
-                            <th class="p-4 border-b">位置/時間</th>
-                            <th class="p-4 border-b">畫面截圖</th>
-                            <th class="p-4 border-b text-center">狀態</th>
-                            <th class="p-4 border-b">註記</th>
-                            <th class="p-4 border-b text-center">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="text-sm divide-y divide-slate-100"></tbody>
-                </table>
-                <div id="empty-msg" class="p-12 text-center text-slate-400 text-sm italic">目前尚無巡檢紀錄</div>
+            <!-- 清單清單 -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-widest font-bold">
+                            <tr>
+                                <th class="p-5 border-b">位置 / 時間</th>
+                                <th class="p-5 border-b">截圖內容</th>
+                                <th class="p-5 border-b text-center">檢測狀態</th>
+                                <th class="p-5 border-b">備註說明</th>
+                                <th class="p-5 border-b text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+                <div id="empty-msg" class="p-20 text-center text-slate-300 text-sm italic">目前無資料，請新增或匯入檔案。</div>
             </div>
 
-            <!-- 底部按鈕 -->
-            <div class="mt-8 flex flex-col md:flex-row gap-4 justify-between items-center border-t border-slate-100 pt-6">
-                <p class="text-slate-500 text-sm">目前紀錄筆數：<span id="recordCount" class="font-bold text-indigo-600">0</span></p>
+            <!-- 底部動作 -->
+            <div class="mt-8 flex flex-col md:flex-row gap-6 justify-between items-center border-t border-slate-100 pt-8">
+                <p class="text-slate-400 text-xs font-medium uppercase tracking-widest">總紀錄筆數: <span id="recordCount" class="text-indigo-600 font-black">0</span></p>
                 <div class="flex flex-wrap gap-4">
-                    <button onclick="exportExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-6 rounded-xl font-bold shadow-md transition flex items-center">
-                        匯出 Excel (.xlsx)
+                    <button onclick="exportExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-8 rounded-xl font-bold shadow-lg transition-all flex items-center text-sm">
+                        匯出 Excel
                     </button>
-                    <button onclick="exportPDF()" class="bg-rose-600 hover:bg-rose-700 text-white py-2.5 px-6 rounded-xl font-bold shadow-md transition flex items-center">
-                        匯出 PDF 報告 (.pdf)
+                    <button onclick="exportPDF()" class="bg-rose-600 hover:bg-rose-700 text-white py-3 px-8 rounded-xl font-bold shadow-lg transition-all flex items-center text-sm">
+                        產出 PDF 報告
                     </button>
                 </div>
             </div>
@@ -119,14 +120,15 @@
         let records = [];
         let currentImageData = null;
 
-        // 元素選取
+        // UI 元件
         const importExcelInput = document.getElementById('importExcel');
         const loading = document.getElementById('loading');
         const tableBody = document.getElementById('tableBody');
         const emptyMsg = document.getElementById('empty-msg');
         const recordCountText = document.getElementById('recordCount');
+        const siteInput = document.getElementById('siteName');
 
-        // --- 核心：強效 Excel 匯入 ---
+        // --- 核心匯入修正 (穩定跨瀏覽器版) ---
         importExcelInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -137,73 +139,185 @@
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 await workbook.xlsx.load(arrayBuffer);
-                const worksheet = workbook.getWorksheets()[0];
-                
-                if (!worksheet) throw new Error("找不到工作表");
+                const worksheet = workbook.worksheets[0];
+                if (!worksheet) throw new Error("Excel 格式不正確");
+
+                // 從檔案名稱嘗試抓取據點名稱 (選配)
+                const fileName = file.name.replace("巡檢報告_", "").replace(".xlsx", "");
+                if (fileName && !siteInput.value) siteInput.value = fileName;
 
                 const newRecords = [];
                 const images = worksheet.getImages();
-
-                // 圖片映射：使用 tl.nativeRow (0-based) 對應資料列
                 const imgMap = {};
-                images.forEach(img => {
-                    imgMap[img.range.tl.nativeRow] = img.imageId;
-                });
+                images.forEach(img => { imgMap[img.range.tl.nativeRow] = img.imageId; });
 
-                worksheet.eachRow((row, rowNumber) => {
-                    if (rowNumber === 1) return; // 跳過標題
-
+                for (let i = 2; i <= worksheet.rowCount; i++) {
+                    const row = worksheet.getRow(i);
                     const camId = row.getCell(1).text;
-                    const time = row.getCell(2).text;
-                    const isImageOk = row.getCell(4).text === '正常';
-                    const isRecordOk = row.getCell(5).text === '正常';
-                    const note = row.getCell(6).text || "";
-
-                    if (!camId) return;
+                    if (!camId) continue;
 
                     let base64Image = "";
-                    const imgId = imgMap[rowNumber - 1];
+                    const imgId = imgMap[i - 1];
                     if (imgId !== undefined) {
                         try {
                             const imgData = workbook.getImage(imgId);
-                            // 轉為 Base64 (修正後的邏輯)
+                            // 修正：手動轉換 Uint8Array 以避免不同瀏覽器的 Stack Overflow 限制
                             const uint8 = new Uint8Array(imgData.buffer);
-                            let binary = '';
-                            for (let i = 0; i < uint8.length; i++) {
-                                binary += String.fromCharCode(uint8[i]);
+                            let binary = "";
+                            for (let j = 0; j < uint8.length; j++) {
+                                binary += String.fromCharCode(uint8[j]);
                             }
                             base64Image = `data:image/${imgData.extension};base64,${window.btoa(binary)}`;
-                        } catch (imgErr) {
-                            console.warn(`第 ${rowNumber} 行圖片還原失敗`, imgErr);
-                        }
+                        } catch (e) { console.error("圖片提取失敗", e); }
                     }
 
                     newRecords.push({
-                        id: Date.now() + rowNumber,
+                        id: Date.now() + i + Math.random(),
                         camId: camId,
-                        time: time,
+                        time: row.getCell(2).text || new Date().toLocaleString(),
                         image: base64Image,
-                        isImageOk: isImageOk,
-                        isRecordOk: isRecordOk,
-                        note: note
+                        isImageOk: row.getCell(4).text.trim() === '正常',
+                        isRecordOk: row.getCell(5).text.trim() === '正常',
+                        note: row.getCell(6).text || ""
                     });
-                });
+                }
 
                 if (newRecords.length > 0) {
                     records = [...records, ...newRecords];
                     renderTable();
-                    alert(`匯入完成！成功還原 ${newRecords.length} 筆紀錄。`);
+                    alert(`成功讀取 ${newRecords.length} 筆資料！`);
                 } else {
-                    alert("檔案格式不符，請確認是本系統匯出的 Excel。");
+                    alert("檔案讀取完成，但沒有找到有效紀錄。");
                 }
             } catch (err) {
-                console.error("Excel 匯入失敗:", err);
-                alert("檔案讀取失敗！請確保這是本系統匯出的 Excel 檔案且未損毀。");
+                console.error(err);
+                alert("匯入失敗！請確保上傳的是本系統產出的 Excel 檔案。");
             } finally {
                 loading.style.display = 'none';
                 importExcelInput.value = '';
             }
         });
 
-        // --- 基礎：圖片處裡 ---
-        document.getElementById('drop-zone').onclick = () => document.getElementById
+        // --- 互動功能 ---
+        document.getElementById('drop-zone').onclick = () => document.getElementById('fileInput').click();
+        document.getElementById('fileInput').onchange = (e) => handleImage(e.target.files[0]);
+        document.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (const item of items) { if (item.type.indexOf("image") !== -1) handleImage(item.getAsFile()); }
+        });
+
+        function handleImage(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentImageData = e.target.result;
+                document.getElementById('temp-preview').src = currentImageData;
+                document.getElementById('preview-container').classList.remove('hidden');
+                document.getElementById('upload-prompt').classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('btn-reset-img').onclick = (e) => {
+            e.stopPropagation();
+            currentImageData = null;
+            document.getElementById('preview-container').classList.add('hidden');
+            document.getElementById('upload-prompt').classList.remove('hidden');
+            document.getElementById('fileInput').value = '';
+        };
+
+        function addEntry() {
+            const camId = document.getElementById('camId').value.trim();
+            if (!camId || !currentImageData) return alert("請輸入位置資訊並放入截圖");
+
+            records.push({
+                id: Date.now(),
+                camId: camId,
+                note: document.getElementById('camNote').value.trim(),
+                time: new Date().toLocaleString(),
+                image: currentImageData,
+                isImageOk: document.getElementById('checkImage').checked,
+                isRecordOk: document.getElementById('checkRecord').checked
+            });
+            renderTable();
+            // 重置
+            document.getElementById('camId').value = "";
+            document.getElementById('camNote').value = "";
+            document.getElementById('btn-reset-img').click();
+        }
+
+        function deleteEntry(id) {
+            if(confirm("確定刪除？")) { records = records.filter(r => r.id !== id); renderTable(); }
+        }
+
+        function renderTable() {
+            recordCountText.innerText = records.length;
+            if (records.length === 0) { emptyMsg.classList.remove('hidden'); tableBody.innerHTML = ''; return; }
+            emptyMsg.classList.add('hidden');
+            tableBody.innerHTML = records.map(r => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="p-5 align-middle font-bold text-slate-700">${r.camId}<br><span class="text-[10px] text-slate-400 font-normal tracking-tighter">${r.time}</span></td>
+                    <td class="p-5 align-middle"><img src="${r.image}" class="preview-img shadow-sm"></td>
+                    <td class="p-5 align-middle text-center text-[10px]">
+                        <div class="inline-flex flex-col gap-1">
+                            <span class="px-2 py-0.5 rounded-full font-bold ${r.isImageOk?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">畫面:${r.isImageOk?'OK':'NG'}</span>
+                            <span class="px-2 py-0.5 rounded-full font-bold ${r.isRecordOk?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">錄影:${r.isRecordOk?'OK':'NG'}</span>
+                        </div>
+                    </td>
+                    <td class="p-5 align-middle text-xs text-slate-500 italic max-w-[180px] break-words">${r.note || '無'}</td>
+                    <td class="p-5 align-middle text-center"><button onclick="deleteEntry(${r.id})" class="text-rose-500 font-bold hover:underline">刪除</button></td>
+                </tr>
+            `).join('');
+        }
+
+        // --- 匯出功能 ---
+        async function exportExcel() {
+            if (records.length === 0) return alert("無資料");
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('巡檢報告');
+            worksheet.columns = [
+                { header: '位置', key: 'camId', width: 25 },
+                { header: '時間', key: 'time', width: 25 },
+                { header: '截圖', key: 'image', width: 35 },
+                { header: '畫面', key: 'isImageOk', width: 12 },
+                { header: '錄影', key: 'isRecordOk', width: 12 },
+                { header: '註記', key: 'note', width: 40 }
+            ];
+            records.forEach((r, i) => {
+                const row = worksheet.addRow({
+                    camId: r.camId, time: r.time,
+                    isImageOk: r.isImageOk ? '正常' : '異常',
+                    isRecordOk: r.isRecordOk ? '正常' : '異常',
+                    note: r.note
+                });
+                row.height = 95; row.alignment = { vertical: 'middle', wrapText: true };
+                if (r.image) {
+                    const imageId = workbook.addImage({ base64: r.image, extension: 'png' });
+                    worksheet.addImage(imageId, { tl: { col: 2, row: i + 1 }, ext: { width: 240, height: 120 } });
+                }
+            });
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveAs(new Blob([buffer]), `巡檢報告_${siteInput.value || '未命名'}.xlsx`);
+        }
+
+        function exportPDF() {
+            if (records.length === 0) return alert("無資料");
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text(`巡檢報告: ${siteInput.value || '未命名'}`, 14, 15);
+            let y = 30;
+            records.forEach((r, i) => {
+                if (y > 240) { doc.addPage(); y = 20; }
+                doc.setDrawColor(230); doc.line(10, y, 200, y); y += 10;
+                doc.text(`${i+1}. 位置: ${r.camId}`, 14, y);
+                doc.setFontSize(9);
+                doc.text(`時間: ${r.time} | 狀態: 畫面 ${r.isImageOk?'正常':'異常'} / 錄影 ${r.isRecordOk?'正常':'異常'}`, 14, y+6);
+                doc.text(`備註: ${r.note || '無'}`, 14, y+12);
+                if(r.image) { try { doc.addImage(r.image, 'JPEG', 130, y-5, 60, 40); } catch(e) {} }
+                y += 50; doc.setFontSize(12);
+            });
+            doc.save(`巡檢報告_${siteInput.value || '未命名'}.pdf`);
+        }
+    </script>
+</body>
+</html>
